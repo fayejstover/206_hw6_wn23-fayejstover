@@ -121,6 +121,7 @@ def cache_all_pages(people_url, filename):
 
 
 
+
     '''
  1. Checks if the page number is found in the dict return by `load_json`
  2. If the page number does not exist in the dictionary, it makes a request
@@ -203,25 +204,26 @@ pass
 #################### EXTRA CREDIT ######################
 
 def calculate_bmi(filename):
-    cache_dict = load_json(filename)
+     cache_dict = load_json(filename)
 
-    bmi_dict = {}
+     bmi_dict = {}
 
-    characters_url = 'https://swapi.dev/api/people/'
-    character_data = get_swapi_info(characters_url)
+     characters_url = 'https://swapi.dev/api/people/'
+     character_data = get_swapi_info(characters_url)
 
-    # Check if height and mass are known
-    for character in character_data['results']:
-        if character['height'] != 'unknown' and character['mass'] != 'unknown':
-            name = character['name']
-            height = float(character['height']) / 100  # Convert height from cm to m
-            mass = float(character['mass'])
-            bmi = mass / height ** 2
-            bmi_dict[name] = bmi
+     # Check if height and mass are known
+     for character in character_data['results']:
+         if character['height'] != 'unknown' and character['mass'] != 'unknown':
+             name = character['name']
+             height = float(character['height']) / 100  # Convert height from cm to m
+             mass = float(character['mass'])
+             bmi = mass / height ** 2
+             bmi_dict[name] = bmi
 
-    return bmi_dict
+     return bmi_dict
+
     
-    '''
+'''
 Calculate each character's Body Mass Index (BMI) if their height and mass is
 known. With the metric
 system, the formula for BMI is weight in kilograms divided by height in meters
@@ -256,8 +258,7 @@ class TestHomework6(unittest.TestCase):
     
     def test_get_swapi_info(self):
         people = get_swapi_info(self.url)
-        tie_ln = get_swapi_info("https://swapi.dev/api/vehicles", {"search":
-"tie/ln"})
+        tie_ln = get_swapi_info("https://swapi.dev/api/vehicles", {"search": "tie/ln"})
         self.assertEqual(type(people), dict)
         self.assertEqual(tie_ln['results'][0]["name"], "TIE/LN starfighter")
         self.assertEqual(get_swapi_info("https://swapi.dev/api/pele"), None)
@@ -265,6 +266,8 @@ class TestHomework6(unittest.TestCase):
     def test_cache_all_pages(self):
         cache_all_pages(self.url, self.filename)
         swapi_people = load_json(self.filename)
+        print("swapi_people: ")
+        print(swapi_people)
         self.assertEqual(type(swapi_people['page 1']), list)
     
     def test_get_starships(self):
