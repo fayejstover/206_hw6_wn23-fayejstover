@@ -2,12 +2,24 @@ import requests
 import json
 import unittest
 import os
+import math
+
 ###########################################
-# Your name: #
-# Who you worked with: #
+# Your name: # Faye Stover
+# Who you worked with: # 
 ###########################################
+
 def load_json(filename):
-'''
+    try:
+        with open(filename, 'r') as f:
+            data = json.load(f)
+            
+    except FileNotFoundError:
+        data = {}
+        
+    return data
+    
+    '''
 Loads a JSON cache from filename if it exists
 Parameters
 ----------
@@ -18,10 +30,16 @@ Returns
 dict
 if the cache exists, a dict with loaded data
 if the cache does not exist, an empty dict
-'''
+    '''
+
 pass
+
+
 def write_json(filename, dict):
-'''
+    with open(filename, 'w') as f:
+        json.dump(dict, f)
+    
+    '''
 Encodes dict into JSON format and writes
 the JSON to filename to save the search results
 Parameters
@@ -33,30 +51,40 @@ Returns
 -------
 None
 does not return anything
-'''
-pass
-def get_swapi_info(url, params=None):
-'''
-Check whether the 'params' dictionary has been specified. Makes a request to
-access data with
-the 'url' and 'params' given, if any. If the request is successful, return a
-dictionary representation
-of the decoded JSON. If the search is unsuccessful, print out "Exception!" and
-return None.
-Parameters
-----------
+    '''
 
-url (str): a url that provides information about entities in the Star Wars
-universe.
-params (dict): optional dictionary of querystring arguments (default value is
-'None').
-Returns
--------
-dict: dictionary representation of the decoded JSON.
-'''
 pass
-def cache_all_pages(people_url, filename):
-'''
+
+
+def get_swapi_info(url, params=None):
+    
+    #Checks if the page number is found in the dict return by `load_json`
+    cache_dict = load_json("swapi_cache.json")
+
+    # Check if data already exists in cache
+    if url in cache_dict:
+        print(f"Retrieving {url} from cache...")
+        return cache_dict[url]
+
+    # If the page number does not exist in the dictionary, it makes a request
+    print(f"Requesting {url} from API...")
+    response = requests.get(url, params=params)
+
+    # Check if API request was successful
+    if response.status_code == 200:
+        data = response.json()
+        
+        cache_dict[url] = data
+        write_json("swapi_cache.json", cache_dict)
+
+        return data
+    
+    else:
+        # if API request was not successful
+        print(f"Request for {url} failed with status code {response.status_code}")
+        return None
+    
+    '''
 1. Checks if the page number is found in the dict return by `load_json`
 2. If the page number does not exist in the dictionary, it makes a request
 (using get_swapi_info)
@@ -69,9 +97,45 @@ people_url (str): a url that provides information about the
 characters in the Star Wars universe (https://swapi.dev/api/people).
 filename(str): the name of the file to write a cache to
 '''
+
 pass
+
+
 def get_starships(filename):
-'''
+    
+    cache_dict = load_json(filename)
+
+    if not cache_dict:
+        cache_dict = {}
+
+    # Get data for each character
+    characters_url = 'https://swapi.dev/api/people/'
+    character_data = get_swapi_info(characters_url)
+
+    starships_dict = {}
+
+    for character in character_data['results']:
+        name = character['name']
+        starships = []
+
+        # Loop over all starship URLs for the character / check if starship data is already in cache
+        for starship_url in character['starships']:
+            if starship_url in cache_dict:
+                starship_data = cache_dict[starship_url]
+                
+            else:
+                starship_data = get_swapi_info(starship_url)
+                cache_dict[starship_url] = starship_data
+                write_json(filename, cache_dict)
+
+            starships.append(starship_data['name'])
+
+        if starships:
+            starships_dict[name] = starships
+
+    return starships_dict
+    
+    '''
 Access the starships url for each character (if any) and pass it to the
 get_swapi_info function
 to get data about a person's starship.
@@ -83,11 +147,32 @@ Returns
 dict: dictionary with the character's name as a key and a list of the name
 their
 starships as the value
-'''
+    '''
+    
 pass
+
 #################### EXTRA CREDIT ######################
+
 def calculate_bmi(filename):
-'''
+    cache_dict = load_json(filename)
+
+    bmi_dict = {}
+
+    characters_url = 'https://swapi.dev/api/people/'
+    character_data = get_swapi_info(characters_url)
+
+    # Check if height and mass are known
+    for character in character_data['results']:
+        if character['height'] != 'unknown' and character['mass'] != 'unknown':
+            name = character['name']
+            height = float(character['height']) / 100  # Convert height from cm to m
+            mass = float(character['mass'])
+            bmi = mass / height ** 2
+            bmi_dict[name] = bmi
+
+    return bmi_dict
+    
+    '''
 Calculate each character's Body Mass Index (BMI) if their height and mass is
 known. With the metric
 system, the formula for BMI is weight in kilograms divided by height in meters
@@ -104,37 +189,45 @@ filename(str): the name of the cache file to read in
 Returns
 -------
 dict: dictionary with the name as a key and the BMI as the value
-'''
+    '''
+
 pass
+
 class TestHomework6(unittest.TestCase):
-def setUp(self):
-dir_path = os.path.dirname(os.path.realpath(__file__))
-self.filename = dir_path + '/' + "swapi_people.json"
-self.cache = load_json(self.filename)
-self.url = "https://swapi.dev/api/people"
-def test_write_json(self):
-write_json(self.filename, self.cache)
-dict1 = load_json(self.filename)
-self.assertEqual(dict1, self.cache)
-def test_get_swapi_info(self):
-people = get_swapi_info(self.url)
-tie_ln = get_swapi_info("https://swapi.dev/api/vehicles", {"search":
+    def setUp(self):
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        self.filename = dir_path + '/' + "swapi_people.json"
+        self.cache = load_json(self.filename)
+        self.url = "https://swapi.dev/api/people"
+    
+    def test_write_json(self):
+        write_json(self.filename, self.cache)
+        dict1 = load_json(self.filename)
+        self.assertEqual(dict1, self.cache)
+    
+    def test_get_swapi_info(self):
+        people = get_swapi_info(self.url)
+        tie_ln = get_swapi_info("https://swapi.dev/api/vehicles", {"search":
 "tie/ln"})
-self.assertEqual(type(people), dict)
-self.assertEqual(tie_ln['results'][0]["name"], "TIE/LN starfighter")
-self.assertEqual(get_swapi_info("https://swapi.dev/api/pele"), None)
-def test_cache_all_pages(self):
-cache_all_pages(self.url, self.filename)
-swapi_people = load_json(self.filename)
-self.assertEqual(type(swapi_people['page 1']), list)
-def test_get_starships(self):
-starships = get_starships(self.filename)
-self.assertEqual(len(starships), 19)
-self.assertEqual(type(starships["Luke Skywalker"]), list)
-self.assertEqual(starships['Biggs Darklighter'][0], 'X-wing')
-def test_calculate_bmi(self):
-bmi = calculate_bmi(self.filename)
-self.assertEqual(len(bmi), 59)
-self.assertAlmostEqual(bmi['Greedo'], 24.73)
+        self.assertEqual(type(people), dict)
+        self.assertEqual(tie_ln['results'][0]["name"], "TIE/LN starfighter")
+        self.assertEqual(get_swapi_info("https://swapi.dev/api/pele"), None)
+
+    def test_cache_all_pages(self):
+        cache_all_pages(self.url, self.filename)
+        swapi_people = load_json(self.filename)
+        self.assertEqual(type(swapi_people['page 1']), list)
+    
+    def test_get_starships(self):
+        starships = get_starships(self.filename)
+        self.assertEqual(len(starships), 19)
+        self.assertEqual(type(starships["Luke Skywalker"]), list)
+        self.assertEqual(starships['Biggs Darklighter'][0], 'X-wing')
+
+    def test_calculate_bmi(self):
+        bmi = calculate_bmi(self.filename)
+        self.assertEqual(len(bmi), 59)
+        self.assertAlmostEqual(bmi['Greedo'], 24.73)
+
 if __name__ == "__main__":
-unittest.main(verbosity=2) 
+    unittest.main(verbosity=2) 
