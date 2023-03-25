@@ -100,24 +100,25 @@ pass
 
 
 def cache_all_pages(people_url, filename):
-    
-    cache_dict = load_json(filename)
-    if not cache_dict:
-        cache_dict = {}
+    cache_dict = load_json(filename) or {}
 
-    # Retrieve the first page
+    # Retrieve all pages of data from the API
     data = get_swapi_info(people_url)
-    cache_dict[people_url] = data
-
-    # Retrieve the rest of the pages, if they exist
     while data['next']:
         next_page_url = data['next']
         if next_page_url not in cache_dict:
             print(f'Retrieving {next_page_url} from API...')
             data = get_swapi_info(next_page_url)
             cache_dict[next_page_url] = data
+        else:
+            data = cache_dict[next_page_url]
+
+    # Add the first page of data to the cache if it's not already there
+    if people_url not in cache_dict:
+        cache_dict[people_url] = data
 
     write_json(filename, cache_dict)
+
 
 
     '''
