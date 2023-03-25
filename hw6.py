@@ -35,9 +35,9 @@ if the cache does not exist, an empty dict
 pass
 
 
-def write_json(filename, dict):
+def write_json(filename, data):
     with open(filename, 'w') as f:
-        json.dump(dict, f)
+        json.dump(data, f)
     
     '''
 Encodes dict into JSON format and writes
@@ -57,8 +57,6 @@ pass
 
 
 def get_swapi_info(url, params=None):
-    
-    #Checks if the page number is found in the dict return by `load_json`
     cache_dict = load_json("swapi_cache.json")
 
     # Check if data already exists in cache
@@ -101,6 +99,43 @@ filename(str): the name of the file to write a cache to
 pass
 
 
+def cache_all_pages(people_url, filename):
+    
+    cache_dict = load_json(filename)
+    if not cache_dict:
+        cache_dict = {}
+
+    # Retrieve the first page
+    data = get_swapi_info(people_url)
+    cache_dict[people_url] = data
+
+    # Retrieve the rest of the pages, if they exist
+    while data['next']:
+        next_page_url = data['next']
+        if next_page_url not in cache_dict:
+            print(f'Retrieving {next_page_url} from API...')
+            data = get_swapi_info(next_page_url)
+            cache_dict[next_page_url] = data
+
+    write_json(filename, cache_dict)
+
+
+    '''
+ 1. Checks if the page number is found in the dict return by `load_json`
+ 2. If the page number does not exist in the dictionary, it makes a request
+ (using get_swapi_info)
+ 3. Add the data to the dictionary (the key is the page number (Ex: page 1) and
+ the value is the results).
+ 4. Write out the dictionary to a file using write_json.
+ Parameters
+ ----------
+ people_url (str): a url that provides information about the
+ characters in the Star Wars universe (https://swapi.dev/api/people).
+ filename(str): the name of the file to write a cache to
+    '''
+    
+    pass
+
 def get_starships(filename):
     
     cache_dict = load_json(filename)
@@ -110,11 +145,21 @@ def get_starships(filename):
 
     # Get data for each character
     characters_url = 'https://swapi.dev/api/people/'
-    character_data = get_swapi_info(characters_url)
+    character_data = []
+    
+    while characters_url:
+        response = requests.get(characters_url)
+        if response.status_code == 200:
+            data = response.json()
+            character_data.extend(data['results'])
+            characters_url = data['next']
+        else:
+            print(f"Error getting character data: {response.content}")
+            break
 
     starships_dict = {}
 
-    for character in character_data['results']:
+    for character in character_data:
         name = character['name']
         starships = []
 
@@ -133,7 +178,10 @@ def get_starships(filename):
         if starships:
             starships_dict[name] = starships
 
+    print ("starships_dict: ")
+    print (starships_dict)
     return starships_dict
+
     
     '''
 Access the starships url for each character (if any) and pass it to the
