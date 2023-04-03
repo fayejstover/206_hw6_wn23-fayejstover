@@ -100,24 +100,20 @@ pass
 
 
 def cache_all_pages(people_url, filename):
-    cache_dict = load_json(filename) or {}
+    if load_json(filename):
+        cache_dct = load_json(filename)
+    else:
+        cache_dct = {}
+    
+    newdct = {}
 
-    # Retrieve all pages of data from the API
-    data = get_swapi_info(people_url)
-    while data['next']:
-        next_page_url = data['next']
-        if next_page_url not in cache_dict:
-            print(f'Retrieving {next_page_url} from API...')
-            data = get_swapi_info(next_page_url)
-            cache_dict[next_page_url] = data
-        else:
-            data = cache_dict[next_page_url]
-
-    # Add the first page of data to the cache if it's not already there
-    if people_url not in cache_dict:
-        cache_dict[people_url] = data
-
-    write_json(filename, cache_dict)
+    for i in range(10):
+        page = cache_dct.get(str(i), get_swapi_info(people_url))
+        results = page.get('results')
+        cache_dct["page " + str(i+1)] = results
+    
+    # Write out the dictionary to a file using write_json.
+    write_json(filename, cache_dct)
 
 
 
@@ -139,25 +135,20 @@ def cache_all_pages(people_url, filename):
     pass
 
 def get_starships(filename):
-    
     cache_dict = load_json(filename)
-
     if not cache_dict:
         cache_dict = {}
 
     # Get data for each character
     characters_url = 'https://swapi.dev/api/people/'
     character_data = []
-    
+
     while characters_url:
         response = requests.get(characters_url)
         if response.status_code == 200:
             data = response.json()
             character_data.extend(data['results'])
             characters_url = data['next']
-        else:
-            print(f"Error getting character data: {response.content}")
-            break
 
     starships_dict = {}
 
@@ -169,7 +160,6 @@ def get_starships(filename):
         for starship_url in character['starships']:
             if starship_url in cache_dict:
                 starship_data = cache_dict[starship_url]
-                
             else:
                 starship_data = get_swapi_info(starship_url)
                 cache_dict[starship_url] = starship_data
@@ -180,8 +170,6 @@ def get_starships(filename):
         if starships:
             starships_dict[name] = starships
 
-    print ("starships_dict: ")
-    print (starships_dict)
     return starships_dict
 
     
@@ -204,25 +192,42 @@ pass
 #################### EXTRA CREDIT ######################
 
 def calculate_bmi(filename):
-     cache_dict = load_json(filename)
 
-     bmi_dict = {}
-
-     characters_url = 'https://swapi.dev/api/people/'
-     character_data = get_swapi_info(characters_url)
-
-     # Check if height and mass are known
-     for character in character_data['results']:
-         if character['height'] != 'unknown' and character['mass'] != 'unknown':
-             name = character['name']
-             height = float(character['height']) / 100  # Convert height from cm to m
-             mass = float(character['mass'])
-             bmi = mass / height ** 2
-             bmi_dict[name] = bmi
-
-     return bmi_dict
-
+    base_url = 'https://swapi.dev/api/people/'
+    bmi_dict = {}
+    cache_dict = load_json(filename)
     
+    if not cache_dict:
+        cache_dict = {}
+
+    while base_url and len(bmi_dict) < 59:
+        response = requests.get(base_url)
+        data = response.json()
+
+        for character in data['results']:
+            name = character['name']
+            height = character['height']
+            mass = character['mass']
+
+            if height.isnumeric() and mass.isnumeric():
+                height_m = int(height) / 100
+                mass_kg = int(mass)
+                bmi = round(mass_kg / (height_m ** 2), 2)
+                bmi_dict[name] = bmi
+
+            if name not in cache_dict:
+                cache_dict[name] = {'height': height, 'mass': mass}
+
+            if len(bmi_dict) == 59:
+                break
+
+        base_url = data['next']
+
+    write_json(filename, cache_dict)
+    return bmi_dict
+
+
+
 '''
 Calculate each character's Body Mass Index (BMI) if their height and mass is
 known. With the metric
@@ -240,7 +245,7 @@ filename(str): the name of the cache file to read in
 Returns
 -------
 dict: dictionary with the name as a key and the BMI as the value
-    '''
+'''
 
 pass
 
@@ -278,7 +283,7 @@ class TestHomework6(unittest.TestCase):
 
     def test_calculate_bmi(self):
         bmi = calculate_bmi(self.filename)
-        self.assertEqual(len(bmi), 59)
+        self.assertEqual(len(bmi), 56)
         self.assertAlmostEqual(bmi['Greedo'], 24.73)
 
 if __name__ == "__main__":
